@@ -1,2 +1,4 @@
 # MidFunctionHook
-midfunction d3d basehook for winxp, win7, win8, win10
+MidFunction d3d Basehook for Winxp, Win7, Win8, Win10
+
+Credits: JokerThai, Highbrow, UC Assorted

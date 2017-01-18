@@ -78,8 +78,8 @@ __declspec(naked)VOID WINAPI DrawIndexedPrimitive_Call()
 	{
 		__asm
 		{
-			MOV ESI, DWORD PTR SS : [EBP + 0x8] // --- Windows 8 / 8.1
-			TEST ESI, ESI
+			MOV EDI, DWORD PTR SS : [EBP + 0x8] // --- Windows 8 / 8.1
+			TEST EDI, EDI
 			PUSHFD
 			PUSHAD
 			JMP UCFORUM

@@ -2,10 +2,7 @@
 // CMain.cpp
 //==============================================================================
 #include "CTools.h"
- #include "CMain.h"
-#pragma comment(lib, "d3dx9.lib")
-//#pragma comment(lib, "DXSDK/d3dx9.lib") 
-#pragma comment(lib, "d3d9.lib")
+#include "CMain.h"
 //==============================================================================
 BOOL DrawIndexedPrimitive_Check = FALSE;
 DWORD DrawIndexedPrimitive_Hook, DrawIndexedPrimitive_Jump;
@@ -25,9 +22,9 @@ VOID WINAPI DrawIndexedPrimitive_Main(LPDIRECT3DDEVICE9 pDevice,D3DPRIMITIVETYPE
     }
     	DrawIndexedPrimitive_CheckPtr = TRUE;
      
-	//test code
-	if(T_Models|| CT_Models)
-	//if(Stride == 32)
+	//pDevice->SetRenderState(D3DRS_ZENABLE, FALSE); //test code
+
+	if(Stride == 32) //test 2
 	{
 		pDevice->SetRenderState(D3DRS_ZENABLE,FALSE);
     	DrawIndexedPrimitive_Pointer(pDevice,Type,BaseVertexIndex,MinIndex,NumVertices,StartIndex,primCount);
@@ -45,8 +42,33 @@ __declspec(naked)VOID WINAPI DrawIndexedPrimitive_Call()
     	DrawIndexedPrimitive_Check = true;
     }
 
-	if (Tools.CheckWindowsVersion(6, 1, VER_NT_WORKSTATION) || Tools.CheckWindowsVersion(6, 0, VER_NT_WORKSTATION))
-	//if (EqualsMajorVersion(6) && EqualsMinorVersion(1))
+
+	if (Tools.isWindows10())
+	{
+		__asm
+		{
+			MOV ESI, DWORD PTR SS : [EBP + 0x8] // --- Windows 10
+			TEST ESI, ESI
+			PUSHFD
+			PUSHAD
+			JMP UCFORUM
+		}
+	}
+
+	if (Tools.isWindows81() || Tools.isWindows80())
+	{
+		__asm
+		{
+			MOV EDI, DWORD PTR SS : [EBP + 0x8] // --- Windows 8 / 8.1
+			TEST EDI, EDI
+			PUSHFD
+			PUSHAD
+			JMP UCFORUM
+		}
+	}
+
+
+	if (Tools.isWindows7() || Tools.isWindowsVista())
 	{
 		__asm
 		{
@@ -59,40 +81,13 @@ __declspec(naked)VOID WINAPI DrawIndexedPrimitive_Call()
 		}
 	}
 
-	if (Tools.CheckWindowsVersion(5, 1, VER_NT_WORKSTATION) || Tools.CheckWindowsVersion(5, 2, VER_NT_WORKSTATION))
-	//if (EqualsMajorVersion(5) && EqualsMinorVersion(1))
+	if (Tools.isWinXPProandServer() || Tools.isWindowsXP())
 	{
 		__asm
 		{
 			PUSH EBX // --- XP
 			PUSH ESI
 			MOV ESI, dword ptr ss : [ebp + 8]
-			PUSHFD
-			PUSHAD
-			JMP UCFORUM
-		}
-	}
-
-	if (Tools.CheckWindowsVersion(6, 3, VER_NT_WORKSTATION))
-	//if (EqualsMajorVersion(6) && EqualsMinorVersion(3))
-	{
-		__asm
-		{
-			MOV EDI, DWORD PTR SS : [EBP + 0x8] // --- Windows 8 / 8.1
-			TEST EDI, EDI
-			PUSHFD
-			PUSHAD
-			JMP UCFORUM
-		}
-	}
-
-	if (Tools.CheckWindowsVersion(6, 2, VER_NT_WORKSTATION))
-	//if (EqualsMajorVersion(6) && EqualsMinorVersion(2))
-	{
-		__asm
-		{
-			MOV ESI, DWORD PTR SS : [EBP + 0x8] // --- Windows 10
-			TEST ESI, ESI
 			PUSHFD
 			PUSHAD
 			JMP UCFORUM
@@ -144,6 +139,17 @@ VOID WINAPI DrawIndexedPrimitive_Breakpoint()
 //==============================================================================
 VOID WINAPI UcFoRum()
 {
+	HMODULE dDll = NULL;
+	while (!dDll)
+	{
+		dDll = GetModuleHandleA("d3d9.dll");
+		Sleep(100);
+	}
+	CloseHandle(dDll);
+
+	Tools.GetRealOSVersion();
+	
+
     PDWORD dwD3DVTable;
     do
     {
@@ -152,33 +158,40 @@ VOID WINAPI UcFoRum()
     while ( !dwD3DVTable );
 
 
-	if (Tools.CheckWindowsVersion(6, 3, VER_NT_WORKSTATION))
+	if (Tools.isWindows10())
 	{
-	DrawIndexedPrimitive_Hook = (dwD3DVTable[82] + 0x2D);// ---Windows 8
-	DrawIndexedPrimitive_Jump = (DrawIndexedPrimitive_Hook + 0x5);
-	*(PDWORD)(&DrawIndexedPrimitive_Pointer) = (DWORD)dwD3DVTable[82];
-	Tools.DetourCreate((BYTE*)DrawIndexedPrimitive_Hook, (BYTE*)DrawIndexedPrimitive_Call, 5);
+		Tools.Log("win 10 detected");
+		DrawIndexedPrimitive_Hook = (dwD3DVTable[82] + 0x30);// ---Windows 10
+		DrawIndexedPrimitive_Jump = (DrawIndexedPrimitive_Hook + 0x5);
+		*(PDWORD)(&DrawIndexedPrimitive_Pointer) = (DWORD)dwD3DVTable[82];
+		Tools.DetourCreate((BYTE*)DrawIndexedPrimitive_Hook, (BYTE*)DrawIndexedPrimitive_Call, 5);
 	}
-	else if (Tools.CheckWindowsVersion(6, 1, VER_NT_WORKSTATION) || Tools.CheckWindowsVersion(6, 0, VER_NT_WORKSTATION))
+	
+	else if (Tools.isWindows81() || Tools.isWindows80())
 	{
-	DrawIndexedPrimitive_Hook = (dwD3DVTable[82] + 0x2D);// ---Windows 7
-	DrawIndexedPrimitive_Jump = (DrawIndexedPrimitive_Hook + 0x7);
-	*(PDWORD)(&DrawIndexedPrimitive_Pointer) = (DWORD)dwD3DVTable[82];
-	Tools.DetourCreate((BYTE*)DrawIndexedPrimitive_Hook, (BYTE*)DrawIndexedPrimitive_Call, 5);
+		Tools.Log("win 8 detected");
+		DrawIndexedPrimitive_Hook = (dwD3DVTable[82] + 0x2D);// ---Windows 8
+		DrawIndexedPrimitive_Jump = (DrawIndexedPrimitive_Hook + 0x5);
+		*(PDWORD)(&DrawIndexedPrimitive_Pointer) = (DWORD)dwD3DVTable[82];
+		Tools.DetourCreate((BYTE*)DrawIndexedPrimitive_Hook, (BYTE*)DrawIndexedPrimitive_Call, 5);
 	}
-	else if (Tools.CheckWindowsVersion(5, 1, VER_NT_WORKSTATION) || Tools.CheckWindowsVersion(5, 2, VER_NT_WORKSTATION))
+
+	else if (Tools.isWindows7() || Tools.isWindowsVista())
 	{
-	DrawIndexedPrimitive_Hook = (dwD3DVTable[82] + 0x1D);// ---Windows XP
-	DrawIndexedPrimitive_Jump = (DrawIndexedPrimitive_Hook + 0x5);
-	*(PDWORD)(&DrawIndexedPrimitive_Pointer) = (DWORD)dwD3DVTable[82];
-	Tools.DetourCreate((BYTE*)DrawIndexedPrimitive_Hook, (BYTE*)DrawIndexedPrimitive_Call, 5);
+		Tools.Log("win 7 detected");
+		DrawIndexedPrimitive_Hook = (dwD3DVTable[82] + 0x2D);// ---Windows 7
+		DrawIndexedPrimitive_Jump = (DrawIndexedPrimitive_Hook + 0x7);
+		*(PDWORD)(&DrawIndexedPrimitive_Pointer) = (DWORD)dwD3DVTable[82];
+		Tools.DetourCreate((BYTE*)DrawIndexedPrimitive_Hook, (BYTE*)DrawIndexedPrimitive_Call, 5);
 	}
-	else if (Tools.CheckWindowsVersion(6, 2, VER_NT_WORKSTATION))
+
+	else if (Tools.isWinXPProandServer() || Tools.isWindowsXP())
 	{
-	DrawIndexedPrimitive_Hook = (dwD3DVTable[82] + 0x30);// ---Windows 10
-	DrawIndexedPrimitive_Jump = (DrawIndexedPrimitive_Hook + 0x5);
-	*(PDWORD)(&DrawIndexedPrimitive_Pointer) = (DWORD)dwD3DVTable[82];
-	Tools.DetourCreate((BYTE*)DrawIndexedPrimitive_Hook, (BYTE*)DrawIndexedPrimitive_Call, 5);
+		Tools.Log("win xp detected");
+		DrawIndexedPrimitive_Hook = (dwD3DVTable[82] + 0x1D);// ---Windows XP
+		DrawIndexedPrimitive_Jump = (DrawIndexedPrimitive_Hook + 0x5);
+		*(PDWORD)(&DrawIndexedPrimitive_Pointer) = (DWORD)dwD3DVTable[82];
+		Tools.DetourCreate((BYTE*)DrawIndexedPrimitive_Hook, (BYTE*)DrawIndexedPrimitive_Call, 5);
 	}
 
     else 
@@ -194,6 +207,16 @@ BOOL WINAPI DllMain(HMODULE hModule,DWORD dwReason,LPVOID lpReserved)
     UNREFERENCED_PARAMETER(lpReserved);
     if ( dwReason == DLL_PROCESS_ATTACH )
     {
+		DisableThreadLibraryCalls(hModule);
+		GetModuleFileNameA(hModule, Tools.dlldir, 512);
+		for (int i = (int)strlen(Tools.dlldir); i > 0; i--)
+		{
+			if (Tools.dlldir[i] == '\\')
+			{
+				Tools.dlldir[i + 1] = 0;
+				break;
+			}
+		}
     	CreateThread(0,0,(LPTHREAD_START_ROUTINE)UcFoRum,0,0,0);
     }
     	return ( TRUE );
